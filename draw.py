@@ -6,8 +6,8 @@ def board(board, const, var):
             # Make a background
             if board[r][c][const.NODE_INFO_MAIN] == const.EMPTY:
                 pygame.draw.rect(var.screen, const.COLOR_BLANK, (c * (const.NODE_SIZE + const.MARGIN) + const.MARGIN, r * (const.NODE_SIZE + const.MARGIN) + const.MARGIN, const.NODE_SIZE, const.NODE_SIZE))
-                # If the board NODE is empty and the mouse if hovering
-                if board[r][c][const.NODE_INFO_EXTRA] == const.HOVER:
+            # Hovering over node
+            elif board[r][c][const.NODE_INFO_MAIN] == const.HOVER:
                     pygame.draw.rect(var.screen, const.COLOR_BACKGROUND, (c * (const.NODE_SIZE + const.MARGIN) + const.MARGIN, r * (const.NODE_SIZE + const.MARGIN) + const.MARGIN, const.NODE_SIZE, const.NODE_SIZE))
             # Look for start pos
             elif board[r][c][const.NODE_INFO_MAIN] == const.START_POS:

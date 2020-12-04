@@ -1,3 +1,4 @@
+from numpy.lib import index_tricks
 import pygame
 import numpy as np
 import sys
@@ -20,16 +21,19 @@ class Constants():
         self.STATE_2 = 2                                                                            # Pick second loaction
         self.STATE_3 = 3                                                                            # Ready for simulation
 
-        self.NODE_INFO_DEPTH = 2                                                                    # Sets the depth of the node info
-        # FIRST SLOT
-        self.NODE_INFO_MAIN = 0                                                                     # First slot in the nodes array
+        self.NODE_INFO_DEPTH = 5                                                                    # Sets the depth of the node info
+        # Main node info
+        self.NODE_INFO_MAIN = 0                                                                     # First slot in the node array
         self.EMPTY = 0                                                                              # If there is no information on the node
         self.START_POS = 1                                                                          # Where the algorithm starts searching
         self.DESTINATION_POS = 2                                                                    # Where the algorithm wants to find the path to
         self.WALL = 3                                                                               # Index for walls
-        # SECOND SLOT
-        self.NODE_INFO_EXTRA = 1                                                                    # Second slot in the nodes array
-        self.HOVER = 1                                                                              # If the piece if hovered
+        self.HOVER = 4                                                                              # If the piece if hovered
+        # Node cost
+        self.NODE_INFO_G_COST = 1                                                                   # Distance from starting node
+        self.NODE_INFO_H_COST = 2                                                                   # Distance from destination node
+        self.NODE_INFO_F_COST = 3                                                                   # Sum of G cost and H cost
+        self.NODE_INFO_PARENT = 4                                                                   # Åarent node
 
         # COLORS
         self.COLOR_BACKGROUND = pygame.Color("#4a4a4a")                                             # Color of the background
@@ -42,8 +46,8 @@ class Constants():
         # BOARD SETTINGS
         self.NODE_SIZE = 100                                                                        # How many pixels wide/heigh a node is
         self.MARGIN = 1                                                                             # Half the margin between node
-        self.ROW_COUNT = 10                                                                         # Amount of vertical node
-        self.COLUMN_COUNT = 15                                                                      # Amount of horizontal nodes
+        self.ROW_COUNT = 5                                                                         # Amount of vertical node
+        self.COLUMN_COUNT = 5                                                                      # Amount of horizontal nodes
         self.SCREEN_HEIGHT = self.ROW_COUNT * (self.NODE_SIZE + self.MARGIN) + self.MARGIN          # Get the screen height from the row node size and margin
         self.SCREEN_WIDTH = self.COLUMN_COUNT * (self.NODE_SIZE + self.MARGIN) + self.MARGIN        # Get the screen width from the row node size and margin
         self.WINDOW_SIZE = (self.SCREEN_WIDTH, self.SCREEN_HEIGHT)                                  # Vector 2 for the screen size
@@ -56,6 +60,9 @@ class Variables():
         self.app_running = False                # If False the program will shut down
         
         self.state = None                       # What things have been done
+
+        self.start_node = None                  # Row and column for the start node
+        self.destination_node = None             # Row and column for the destination node
         
         self.col_hover = 0                      # What column the mouse if currently hovering
         self.row_hover = 0                      # What row the mouse if currently hovering
@@ -84,6 +91,99 @@ def print_board(board):
 def creat_blank_board():
     board = np.zeros(shape=(const.ROW_COUNT, const.COLUMN_COUNT, const.NODE_INFO_DEPTH), dtype=int)
     return board
+
+
+def get_cost(current_node):
+    row_destination_node = var.destination_node[0]
+    col_destination_node = var.destination_node[1]
+
+    row_start_node = var.start_node[0]
+    col_start_node = var.start_node[1]
+
+    row_current_node = current_node[0]
+    col_current_node = current_node[1]
+
+    row_distance_g_cost = get_distance(row_current_node, row_start_node)
+    col_distance_g_cost = get_distance(col_current_node, col_start_node)
+
+    row_distance_h_cost = get_distance(row_current_node, row_destination_node)
+    col_distance_h_cost = get_distance(col_current_node, col_destination_node)
+
+    # Current node to start node
+    g_cost = math.sqrt(row_distance_g_cost^2 + col_distance_g_cost^2)
+    # Current node to destination node
+    h_cost = math.sqrt(row_distance_h_cost^2 + col_distance_h_cost^2)
+    # A sum on g cosy and h cost
+    f_cost = g_cost + h_cost
+
+    var.board[row_current_node][col_current_node][const.NODE_INFO_G_COST] = g_cost
+    var.board[row_current_node][col_current_node][const.NODE_INFO_H_COST] = h_cost
+    var.board[row_current_node][col_current_node][const.NODE_INFO_F_COST] = f_cost
+
+
+def get_distance(a, b):
+    big = max(a, b)
+    small = min(a, b)
+
+    distance = (big - small) * 100
+
+    return distance
+
+
+def get_lowest_f_cost(open):
+    lowest_value = math.inf
+    lowest_node = None
+    for i in open:
+        row = i[0]
+        col = i[1]
+
+        if not var.board[row][col][const.NODE_INFO_F_COST]:
+            get_cost(i)
+        
+        if var.board[row][col][const.NODE_INFO_F_COST] < lowest_value:
+            lowest_value = var.board[row][col][const.NODE_INFO_F_COST]
+            lowest_node = [row, col]
+
+    return lowest_node
+
+
+    #     value = i[const.NODE_INFO_F_COST]
+    #     if value < lowest_value:
+    #         lowest_value = value
+    # return lowest_value
+
+
+def a_star():
+    open = []
+    closed = []
+    # Put the start node in the open list
+    open.append(var.start_node)
+
+    while True:
+        # Set current node to the node with the lowest f cost from the open list
+        current_node = get_lowest_f_cost(open)
+        print_board(var.board)
+
+        # Remove current node from the open list
+        index = 0
+        for i in open:
+            if i == current_node:
+                del open[index]
+            index += 1       
+        
+        # Add current node to the closed list
+        closed.append(current_node)
+
+        # Check if the current node is the destination node
+        if current_node == var.destination_node:
+            return
+
+
+        return
+
+
+    # var.start_node
+    # var.destination_node
 
 
 if __name__ == "__main__":
@@ -117,7 +217,6 @@ def new_search():
             # Mouse location
             if event.type == pygame.MOUSEMOTION:
                 if not var.simulation_runngin:
-                    b_copy = var.board.copy()                                                                           # Make a copy of the board
                     var.col_hover = int((event.pos[0]) / (const.NODE_SIZE + const.MARGIN))                              # Get the column the mouse is hovering
                     var.row_hover = int((event.pos[1]) / (const.NODE_SIZE + const.MARGIN))                              # Get the row the mouse is hovering
                     # Make sure the column index can't highter than the max count
@@ -127,8 +226,11 @@ def new_search():
                     if var.row_hover > const.ROW_COUNT - 1:
                         var.row_hover = const.ROW_COUNT - 1
 
-                    b_copy[var.row_hover][var.col_hover][const.NODE_INFO_EXTRA] = const.HOVER                           # Place the temp hovering info on the board copy
-                    draw.board(b_copy, const, var)                                                                      # Draw the copied board on screen
+                    b_copy = var.board.copy()                                                                           # Make a copy of the board
+                    if var.board[var.row_hover][var.col_hover][const.NODE_INFO_MAIN] == const.EMPTY:                    # Check if the hovered node is empty
+                        b_copy[var.row_hover][var.col_hover][const.NODE_INFO_MAIN] = const.HOVER                        # Place the temp hovering info on the board copy
+
+                    draw.board(b_copy, const, var)                                                                      # Redraw the board every time the mouse moves
 
             # Mouse 1
             if pygame.mouse.get_pressed()[0]:
@@ -138,11 +240,13 @@ def new_search():
                         # Place starting point
                         if var.state == const.STATE_1:                                                                  # Check if the state is the STATE_1
                             var.board[var.row_hover][var.col_hover][const.NODE_INFO_MAIN] = const.STATE_1               # Set the start pos
+                            var.start_node = [var.row_hover, var.col_hover]                                             # Set the start node variable
                             var.state = const.STATE_2                                                                   # Set the state to STATE_2
                             draw.board(var.board, const, var)                                                           # Update the visible board
                         # Place destination
                         elif var.state == const.STATE_2:                                                                # Check if the state is the STATE_2
                             var.board[var.row_hover][var.col_hover][const.NODE_INFO_MAIN] = const.STATE_2               # Set the destination pos
+                            var.destination_node = [var.row_hover, var.col_hover]                                       # Set the destination node variable
                             var.state = const.STATE_3                                                                   # Set the state to STATE_3
                             draw.board(var.board, const, var)                                                           # Update the visible board
 
@@ -165,6 +269,7 @@ def new_search():
                 if event.key == pygame.K_SPACE:
                     if var.state == const.STATE_3:
                         var.simulation_runngin = True
+                        a_star()
 
                 # Escape "RESET"
                 if event.key == pygame.K_ESCAPE:
