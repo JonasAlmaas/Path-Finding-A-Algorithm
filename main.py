@@ -21,7 +21,7 @@ class Constants():
         self.STATE_2 = 2                                                                            # Pick second loaction
         self.STATE_3 = 3                                                                            # Ready for simulation
 
-        self.NODE_INFO_DEPTH = 5                                                                    # Sets the depth of the node info
+        self.NODE_INFO_DEPTH = 6                                                                    # Sets the depth of the node info
         # Main node info
         self.NODE_INFO_MAIN = 0                                                                     # First slot in the node array
         self.EMPTY = 0                                                                              # If there is no information on the node
@@ -33,21 +33,27 @@ class Constants():
         self.NODE_INFO_G_COST = 1                                                                   # Distance from starting node
         self.NODE_INFO_H_COST = 2                                                                   # Distance from destination node
         self.NODE_INFO_F_COST = 3                                                                   # Sum of G cost and H cost
-        self.NODE_INFO_PARENT = 4                                                                   # Åarent node
+        self.NODE_INFO_PARENT = 4                                                                   # Parent node
+        self.NODE_INFO_STATE = 5                                                                    # Node state
+        self.NODE_STATE_OPEN = 1                                                                    # Node state open
+        self.NODE_STATE_CLOSED = 2                                                                  # Node state closed
 
         # COLORS
+        self.COLOR_TEXT = pygame.Color("#d9d9d9")                                                   # Color for text
         self.COLOR_BACKGROUND = pygame.Color("#4a4a4a")                                             # Color of the background
         self.COLOR_BLANK = pygame.Color("#2e2e2e")                                                  # Color of the enpty slots (0s in the matrix)
         self.COLOR_START_POS = pygame.Color("#2976ba")                                              # Color of the start pos
-        self.COLOR_DESTINATION_POS = pygame.Color("#ba2929")                                        # Color of the destination pos
+        self.COLOR_DESTINATION_POS = pygame.Color("#c97534")                                        # Color of the destination pos
         self.COLOR_WALL = pygame.Color("#1c1c1c")                                                   # Color of the walls
-        self.COLOR_PATHFINDING = pygame.Color("#00ff00")                                            # Color of the traceing
+        self.COLOR_PATH = pygame.Color("#742880")                                                   # Color for the final path
+        self.COLOR_STATE_CLOSED = pygame.Color("#bf3d3d")                                           # Color for a closed node
+        self.COLOR_STATE_OPEN = pygame.Color("#5fb35f")                                             # Color for an open node
 
         # BOARD SETTINGS
-        self.NODE_SIZE = 100                                                                        # How many pixels wide/heigh a node is
+        self.NODE_SIZE = 25                                                                         # How many pixels wide/heigh a node is
         self.MARGIN = 1                                                                             # Half the margin between node
-        self.ROW_COUNT = 5                                                                         # Amount of vertical node
-        self.COLUMN_COUNT = 5                                                                      # Amount of horizontal nodes
+        self.ROW_COUNT = 50                                                                         # Amount of vertical node
+        self.COLUMN_COUNT = 50                                                                      # Amount of horizontal nodes
         self.SCREEN_HEIGHT = self.ROW_COUNT * (self.NODE_SIZE + self.MARGIN) + self.MARGIN          # Get the screen height from the row node size and margin
         self.SCREEN_WIDTH = self.COLUMN_COUNT * (self.NODE_SIZE + self.MARGIN) + self.MARGIN        # Get the screen width from the row node size and margin
         self.WINDOW_SIZE = (self.SCREEN_WIDTH, self.SCREEN_HEIGHT)                                  # Vector 2 for the screen size
@@ -97,23 +103,29 @@ def get_cost(current_node):
     row_destination_node = var.destination_node[0]
     col_destination_node = var.destination_node[1]
 
-    row_start_node = var.start_node[0]
-    col_start_node = var.start_node[1]
-
     row_current_node = current_node[0]
     col_current_node = current_node[1]
 
-    row_distance_g_cost = get_distance(row_current_node, row_start_node)
-    col_distance_g_cost = get_distance(col_current_node, col_start_node)
+    # If ther is no parent, use self values for parent
+    if var.board[row_current_node][col_current_node][const.NODE_INFO_PARENT] == 0:
+        var.board[row_current_node][col_current_node][const.NODE_INFO_PARENT] = int(str(row_current_node) + str(col_current_node))
+
+    parent_node = var.board[row_current_node][col_current_node][const.NODE_INFO_PARENT]
+    info = [char for char in str(parent_node)]
+    row_parent_node = int(info[0])
+    col_parent_node = int(info[1])
+
+    row_distance_g_cost = get_distance(row_current_node, row_parent_node)
+    col_distance_g_cost = get_distance(col_current_node, col_parent_node)
 
     row_distance_h_cost = get_distance(row_current_node, row_destination_node)
     col_distance_h_cost = get_distance(col_current_node, col_destination_node)
 
     # Current node to start node
+    g_cost = math.sqrt(row_distance_g_cost^2 + col_distance_g_cost^2) + var.board[row_parent_node][col_parent_node][const.NODE_INFO_G_COST]
     g_cost = math.sqrt(row_distance_g_cost^2 + col_distance_g_cost^2)
-    # Current node to destination node
     h_cost = math.sqrt(row_distance_h_cost^2 + col_distance_h_cost^2)
-    # A sum on g cosy and h cost
+    # A sum on g cost and h cost
     f_cost = g_cost + h_cost
 
     var.board[row_current_node][col_current_node][const.NODE_INFO_G_COST] = g_cost
@@ -136,10 +148,9 @@ def get_lowest_f_cost(open):
     for i in open:
         row = i[0]
         col = i[1]
-
-        if not var.board[row][col][const.NODE_INFO_F_COST]:
-            get_cost(i)
         
+        get_cost(i)
+
         if var.board[row][col][const.NODE_INFO_F_COST] < lowest_value:
             lowest_value = var.board[row][col][const.NODE_INFO_F_COST]
             lowest_node = [row, col]
@@ -147,10 +158,31 @@ def get_lowest_f_cost(open):
     return lowest_node
 
 
-    #     value = i[const.NODE_INFO_F_COST]
-    #     if value < lowest_value:
-    #         lowest_value = value
-    # return lowest_value
+def get_neighbours(current_node):
+    neighbors = lambda x, y : [[x2, y2] for x2 in range(x-1, x+2) for y2 in range(y-1, y+2) if (-1 < x <= const.SCREEN_WIDTH and
+    -1 < y <= const.SCREEN_HEIGHT and
+    (x != x2 or y != y2) and
+    (0 <= x2 <= const.SCREEN_WIDTH) and
+    (0 <= y2 <= const.SCREEN_HEIGHT))]
+
+    active_row = current_node[0]
+    active_col = current_node[1]
+
+    neighbor_list = neighbors(active_row, active_col)
+
+    item_amount = len(neighbor_list)
+
+    for i in range(item_amount):
+        element = neighbor_list[item_amount-1-i]
+        row = element[0]
+        col = element[1]
+
+        if var.board[row][col][const.NODE_INFO_MAIN] == const.WALL or var.board[row][col][const.NODE_INFO_STATE] == const.NODE_STATE_CLOSED:
+            del neighbor_list[item_amount-1-i]
+        else:
+            var.board[row][col][const.NODE_INFO_PARENT] = int(str(active_row) + str(active_col))
+    
+    return neighbor_list
 
 
 def a_star():
@@ -160,30 +192,42 @@ def a_star():
     open.append(var.start_node)
 
     while True:
+        draw.board(var.board, const, var)
+
         # Set current node to the node with the lowest f cost from the open list
         current_node = get_lowest_f_cost(open)
-        print_board(var.board)
+
+        # TODO just for debuging
+        # print(current_node, var.destination_node)
+        # print_board(var.board)
 
         # Remove current node from the open list
         index = 0
         for i in open:
             if i == current_node:
                 del open[index]
-            index += 1       
+            index += 1
         
         # Add current node to the closed list
         closed.append(current_node)
+        var.board[current_node[0]][current_node[1]][const.NODE_INFO_STATE] = const.NODE_STATE_CLOSED
 
         # Check if the current node is the destination node
         if current_node == var.destination_node:
+            print("Found it!")
             return
+        
+        # Get all valid neighbours
+        neighbours = get_neighbours(current_node)
+        for neighbour in neighbours:
+            is_in_list = False
+            for item in open:
+                if item == neighbour:
+                    is_in_list = True
 
-
-        return
-
-
-    # var.start_node
-    # var.destination_node
+            if is_in_list == False:
+                open.append(neighbour)
+                var.board[neighbour[0]][neighbour[1]][const.NODE_INFO_STATE] = const.NODE_STATE_OPEN
 
 
 if __name__ == "__main__":
