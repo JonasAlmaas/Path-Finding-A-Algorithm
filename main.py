@@ -33,8 +33,8 @@ class Constants():
         self.NODE_INFO_G_COST = 1                                                                   # Distance from starting node
         self.NODE_INFO_H_COST = 2                                                                   # Distance from destination node
         self.NODE_INFO_F_COST = 3                                                                   # Sum of G cost and H cost
-        self.COST_STRAIGHT = 10                                                                     # F cost for a straight node
-        self.COST_DIAGONAL = 14                                                                     # F cost for a diagonal node
+        self.COST_STRAIGHT = 100                                                                    # F cost for a straight node
+        self.COST_DIAGONAL = 141                                                                    # F cost for a diagonal node
         self.NODE_INFO_PARENT = 4                                                                   # Parent node
         self.NODE_INFO_STATE = 5                                                                    # Node state
         self.NODE_STATE_OPEN = 1                                                                    # Node state open
@@ -126,16 +126,17 @@ def get_cost(current_node):
     # A sum on g cost and h cost
     f_cost = g_cost + h_cost
 
-    var.board[row_current_node][col_current_node][const.NODE_INFO_G_COST][0] = g_cost
-    var.board[row_current_node][col_current_node][const.NODE_INFO_H_COST][0] = h_cost
-    var.board[row_current_node][col_current_node][const.NODE_INFO_F_COST][0] = f_cost
+    if var.board[row_current_node][col_current_node][const.NODE_INFO_F_COST][0] < f_cost:
+        var.board[row_current_node][col_current_node][const.NODE_INFO_G_COST][0] = g_cost
+        var.board[row_current_node][col_current_node][const.NODE_INFO_H_COST][0] = h_cost
+        var.board[row_current_node][col_current_node][const.NODE_INFO_F_COST][0] = f_cost
 
 
 def get_distance(a, b):
     big = max(a, b)
     small = min(a, b)
 
-    distance = (big - small) * 10
+    distance = (big - small) * 100
 
     return distance
 
