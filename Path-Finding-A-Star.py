@@ -4,57 +4,62 @@ import time
 import math
 
 
+class Node_types():
+    def __init__(self):
+        self.EMPTY = 0
+        self.START = 1
+        self.END = 2
+        self.OPEN = 3
+        self.CLOSED = 4
+        self.PATH = 5
+        self.BARRIER = 6
+
+
+class Costs():
+    def __init__(self):
+        self.STRAIGHT = 1
+        self.DIAGONAL = 1.414213562
+        # JUST FOR DEBUGGNG
+        # self.STRAIGHT = 10
+        # self.DIAGONAL = 14
+
+
+class Dimensions():
+    def __init__(self, rows, columns):
+        self.NODE_WIDTH_HEIGHT = 25
+        self.NODE_MARGIN = 1
+        self.WINDOW_HEIGHT = (self.NODE_WIDTH_HEIGHT + self.NODE_MARGIN) * rows
+        self.WINDOW_WIDTH = (self.NODE_WIDTH_HEIGHT + self.NODE_MARGIN) * columns
+        self.WINDOW_WIDTH_HEIGHT = (self.WINDOW_HEIGHT, self.WINDOW_WIDTH)
+
+
+class Colors():
+    def __init__(self):
+        class Nodes():
+            def __init__(self):
+                self.EMPTY = pygame.Color("#393939")            # Grey
+                self.START = pygame.Color("#4294db")            # Blue
+                self.END = pygame.Color("#ffab36")              # Orange
+                self.OPEN = pygame.Color("#6cb86c")             # Green
+                self.CLOSED = pygame.Color("#c95353")           # Red
+                self.PATH = pygame.Color("#bb00ff")             # Purple
+                self.BARRIER = pygame.Color("#242424")          # Dark grey
+
+        self.NODE = Nodes()
+        self.BOARD = pygame.Color("#4d4d4d")                    # Light grey
+        self.TEXT = pygame.Color("#d9d9d9")                     # White
+
+
+class Keybindings():
+    def __init__(self):
+        # MOUSE 1 = Place/Remove start/end nodes and remove barriers
+        # Mouse 2 = Place barriers
+        self.SIMULATE = pygame.K_SPACE          # Run simulation
+        self.RESET = pygame.K_ESCAPE            # Reset everything
+
+
 class Constants():
     def __init__(self):
-        class Node_types():
-            def __init__(self):
-                self.EMPTY = 0
-                self.START = 1
-                self.END = 2
-                self.OPEN = 3
-                self.CLOSED = 4
-                self.PATH = 5
-                self.BARRIER = 6
-
-        class Costs():
-            def __init__(self):
-                self.STRAIGHT = 1
-                self.DIAGONAL = 1.414213562
-                # JUST FOR DEBUGGNG
-                # self.STRAIGHT = 10
-                # self.DIAGONAL = 14
-
-        class Colors():
-            def __init__(self):
-                class Nodes():
-                    def __init__(self):
-                        self.EMPTY = pygame.Color("#393939")            # Grey
-                        self.START = pygame.Color("#4294db")            # Blue
-                        self.END = pygame.Color("#ffab36")              # Orange
-                        self.OPEN = pygame.Color("#6cb86c")             # Green
-                        self.CLOSED = pygame.Color("#c95353")           # Red
-                        self.PATH = pygame.Color("#bb00ff")             # Purple
-                        self.BARRIER = pygame.Color("#242424")          # Dark grey
-
-                self.NODE = Nodes()
-                self.BOARD = pygame.Color("#4d4d4d")                    # Light grey
-                self.TEXT = pygame.Color("#d9d9d9")                     # White
-
-        class Dimensions():
-            def __init__(self, rows, columns):
-                self.NODE_WIDTH_HEIGHT = 25
-                self.NODE_MARGIN = 1
-                self.WINDOW_HEIGHT = (self.NODE_WIDTH_HEIGHT + self.NODE_MARGIN) * rows
-                self.WINDOW_WIDTH = (self.NODE_WIDTH_HEIGHT + self.NODE_MARGIN) * columns
-                self.WINDOW_WIDTH_HEIGHT = (self.WINDOW_HEIGHT, self.WINDOW_WIDTH)
-
-        class Keybindings():
-            def __init__(self):
-                # MOUSE 1 = Place/Remove start/end nodes and remove barriers
-                # Mouse 2 = Place barriers
-                self.SIMULATE = pygame.K_SPACE          # Run simulation
-                self.RESET = pygame.K_ESCAPE            # Reset everything
-
         self.ROWS = 50
         self.COLUMNS = 50
 
@@ -202,7 +207,7 @@ def create_board():
 
 
 def draw_board():
-    var.window.fill(const.COLOR.BOARD)          # Set the background color
+    var.window.fill(const.COLOR.BOARD)
 
     for row in var.board:
         for node in row:
@@ -249,6 +254,13 @@ def trace_path():
         current_node = node.parent
 
 
+def sim_end(start):
+    end = time.time()
+    print("Finished in:", (end - start), "seconds")
+    var.simulation.running = False
+    var.simulation.done = True
+
+
 def a_star():
     start = time.time()
     open = []
@@ -257,7 +269,12 @@ def a_star():
     first_loop = True
 
     while True:
-        draw_board()
+        # Check if the open list is empty
+        if open == []:
+            print("No valid paths")
+            sim_end(start)
+            return
+
         if not first_loop:
             # Set the current node to the node in the open list with the lowest F cost
             current_node = get_lowest_f_cost(open)
@@ -280,12 +297,9 @@ def a_star():
 
         # Check if the current node is the end node
         if current_node == var.node.end:
-            end = time.time()
+            sim_end(start)
             trace_path()
             draw_board()
-            print("Finished it in:", (end - start), "seconds")
-            var.simulation.running = False
-            var.simulation.done = True
             return
 
         # Get all valid neighbors
@@ -304,6 +318,8 @@ def a_star():
                     row, col = neighbor
                     node = var.board[row][col]
                     node.set_state("open")
+
+        draw_board()
 
 
 def new_search():
