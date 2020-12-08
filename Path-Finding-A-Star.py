@@ -28,16 +28,16 @@ class Constants():
             def __init__(self):
                 class Nodes():
                     def __init__(self):
-                        self.EMPTY = pygame.Color("#2e2e2e")            # Grey
-                        self.START = pygame.Color("#2483d6")            # Blue
-                        self.END = pygame.Color("#ff9500")              # Orange
-                        self.OPEN = pygame.Color("#5fb35f")             # Green
-                        self.CLOSED = pygame.Color("#bf3d3d")           # Red
-                        self.PATH = pygame.Color("#992bab")             # Purple
-                        self.BARRIER = pygame.Color("#1c1c1c")          # Dark grey
+                        self.EMPTY = pygame.Color("#393939")            # Grey
+                        self.START = pygame.Color("#4294db")            # Blue
+                        self.END = pygame.Color("#ffab36")              # Orange
+                        self.OPEN = pygame.Color("#6cb86c")             # Green
+                        self.CLOSED = pygame.Color("#c95353")           # Red
+                        self.PATH = pygame.Color("#bb00ff")             # Purple
+                        self.BARRIER = pygame.Color("#242424")          # Dark grey
 
                 self.NODE = Nodes()
-                self.BOARD = pygame.Color("#4a4a4a")                    # Light grey
+                self.BOARD = pygame.Color("#4d4d4d")                    # Light grey
                 self.TEXT = pygame.Color("#d9d9d9")                     # White
 
         class Dimensions():
