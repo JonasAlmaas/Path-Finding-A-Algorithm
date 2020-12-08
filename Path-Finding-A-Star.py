@@ -35,7 +35,7 @@ class Dimensions():
 
 # Colors for the different nodes
 class Node_colors():
-    def __ini__(self):
+    def __init__(self):
         self.EMPTY = pygame.Color("#393939")        # Grey
         self.START = pygame.Color("#4294db")        # Blue
         self.END = pygame.Color("#ffab36")          # Orange
