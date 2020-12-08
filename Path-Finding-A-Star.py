@@ -4,6 +4,7 @@ import time
 import math
 
 
+# Indexes for all the different nodes
 class Node_types():
     def __init__(self):
         self.EMPTY = 0
@@ -15,15 +16,14 @@ class Node_types():
         self.BARRIER = 6
 
 
-class Costs():
+# Cost for different moves
+class Move_cost():
     def __init__(self):
         self.STRAIGHT = 1
         self.DIAGONAL = 1.414213562
-        # JUST FOR DEBUGGNG
-        # self.STRAIGHT = 10
-        # self.DIAGONAL = 14
 
 
+# Dimentions for things to be drawn
 class Dimensions():
     def __init__(self, rows, columns):
         self.NODE_WIDTH_HEIGHT = 25
@@ -33,21 +33,24 @@ class Dimensions():
         self.WINDOW_WIDTH_HEIGHT = (self.WINDOW_HEIGHT, self.WINDOW_WIDTH)
 
 
+# Colors for the different nodes
+class Node_colors():
+    def __ini__(self):
+        self.EMPTY = pygame.Color("#393939")        # Grey
+        self.START = pygame.Color("#4294db")        # Blue
+        self.END = pygame.Color("#ffab36")          # Orange
+        self.OPEN = pygame.Color("#6cb86c")         # Green
+        self.CLOSED = pygame.Color("#c95353")       # Red
+        self.PATH = pygame.Color("#bb00ff")         # Purple
+        self.BARRIER = pygame.Color("#242424")      # Dark grey
+
+
+# All colors
 class Colors():
     def __init__(self):
-        class Nodes():
-            def __init__(self):
-                self.EMPTY = pygame.Color("#393939")            # Grey
-                self.START = pygame.Color("#4294db")            # Blue
-                self.END = pygame.Color("#ffab36")              # Orange
-                self.OPEN = pygame.Color("#6cb86c")             # Green
-                self.CLOSED = pygame.Color("#c95353")           # Red
-                self.PATH = pygame.Color("#bb00ff")             # Purple
-                self.BARRIER = pygame.Color("#242424")          # Dark grey
-
-        self.NODE = Nodes()
-        self.BOARD = pygame.Color("#4d4d4d")                    # Light grey
-        self.TEXT = pygame.Color("#d9d9d9")                     # White
+        self.NODE = Node_colors()
+        self.BOARD = pygame.Color("#4d4d4d")        # Light grey
+        self.TEXT = pygame.Color("#d9d9d9")         # White
 
 
 class Keybindings():
@@ -65,104 +68,104 @@ class Constants():
 
         self.NODE_TYPE = Node_types()
         self.COLOR = Colors()
-        self.COST = Costs()
+        self.COST = Move_cost()
         self.DIMENSION = Dimensions(self.ROWS, self.COLUMNS)
         self.KEYBIND = Keybindings()
 
 
+class Node_variables():
+    def __init__(self):
+        self.start = None   # Node to search from
+        self.end = None      # Node you want the shortest path to
+
+
+class Simulation_variables():
+    def __init__(self):
+        self.running = False
+        self.done = False
+
+
 class Variables():
     def __init__(self):
-        class Nodes():
-            def __init__(self):
-                self.start = None   # Node to search from
-                self.end = None      # Node you want the shortest path to
-
-        class Simulation():
-            def __init__(self):
-                self.running = False
-                self.done = False
-
-        self.node = Nodes()
-        self.simulation = Simulation()
-
         self.window = None          # The window everything is displayed in
         self.board = None           # Board matrix all that positions are stored on
         self.mouse_hover_pos = None
 
+        self.node = Node_variables()
+        self.simulation = Simulation_variables()
 
+
+# Global objects
 const = Constants()
 var = Variables()
 
 
-class Node():
+# The different cost values for each node
+class Node_cost():
+    def __init__(self):
+        self.g = None           # Distance from starting node. Shortest path to parent + Parents G cost
+        self.h = None           # Distance from end node
+        self.f = math.inf       # Sum of G cost and H cost
+
+
+# Information about the location of the node
+class Node_pos():
     def __init__(self, row, col):
         self.row = row
         self.col = col
         self.x = row * (const.DIMENSION.NODE_WIDTH_HEIGHT + const.DIMENSION.NODE_MARGIN)
         self.y = col * (const.DIMENSION.NODE_WIDTH_HEIGHT + const.DIMENSION.NODE_MARGIN)
-        self.type = const.NODE_TYPE.EMPTY
-        self.parent = None
-        self.neighbors = []
-        self.color = const.COLOR.NODE.EMPTY
 
-        class Costs():
-            def __init__(self):
-                self.g = None           # Distance from starting node. Shortest path to parent + Parents G cost
-                self.h = None           # Distance from end node
-                self.f = math.inf       # Sum of G cost and H cost
 
-        self.cost = Costs()
+# The main node class
+class Node():
+    def __init__(self, row, col):
+        self.type = const.NODE_TYPE.EMPTY       # Setting the node to an empty node type
+        self.color = const.COLOR.NODE.EMPTY     # Setting node color to the color of an empty node
+        self.parent = None                      # A tuple containing the row and col for the parent node
+        self.neighbors = []                     # A list of all the nodes neighbors
+        self.pos = Node_pos(row, col)           # Information about the position of the node (row, col, x, y)
+        self.cost = Node_cost()                 # Information about the cost values for the node (g, h, f)
 
+    # Input the type of a node you wanna make it. example: node.set_state("open")
     def set_state(self, state: str):
         self.type = getattr(const.NODE_TYPE, state.upper())
         self.color = getattr(const.COLOR.NODE, state.upper())
 
+    # Make the node ready to be drawn on the next update
     def draw(self):
-        pygame.draw.rect(var.window, self.color, (self.x, self.y, const.DIMENSION.NODE_WIDTH_HEIGHT, const.DIMENSION.NODE_WIDTH_HEIGHT))
+        pygame.draw.rect(var.window, self.color, (self.pos.x, self.pos.y, const.DIMENSION.NODE_WIDTH_HEIGHT, const.DIMENSION.NODE_WIDTH_HEIGHT))
 
-        # # JUST FOR DEBUGGNG : Drawing the costs on screen
-        # # DISPLAY G COST
-        # if not self.cost.g == None:
-        #     font = pygame.font.SysFont(None, const.DIMENSION.NODE_WIDTH_HEIGHT // 3)
-        #     txt = font.render(str(self.cost.g), True, const.COLOR.TEXT)
-        #     var.window.blit(txt, (self.x, self.y))
-
-        # # DISPLAY H COST
-        # if not self.cost.h == None:
-        #     font = pygame.font.SysFont(None, const.DIMENSION.NODE_WIDTH_HEIGHT // 4)
-        #     txt = font.render(str(self.cost.h), True, const.COLOR.TEXT)
-        #     var.window.blit(txt, (self.x + (const.DIMENSION.NODE_WIDTH_HEIGHT - const.DIMENSION.NODE_WIDTH_HEIGHT // 3), self.y))
-
-        # # DISPLAY F COST
-        # if not self.cost.f == math.inf:
-        #     font = pygame.font.SysFont(None, const.DIMENSION.NODE_WIDTH_HEIGHT // 3)
-        #     txt = font.render(str(self.cost.f), True, const.COLOR.TEXT)
-        #     var.window.blit(txt, (self.x + const.DIMENSION.NODE_WIDTH_HEIGHT // 3, self.y + const.DIMENSION.NODE_WIDTH_HEIGHT // 2))
-
+    # Update the list of valid neighbors
     def update_neighbors(self):
         self.neighbors = []
         # Set of node types to skip
         skip = {const.NODE_TYPE.START, const.NODE_TYPE.CLOSED, const.NODE_TYPE.BARRIER}
 
-        for col in range(self.col-1, self.col+2):
-            for row in range(self.row-1, self.row+2):
-                # If it's the center node, aka itself
-                if (self.row == row) and (self.col == col):
+        # Check a 3x3 grid around itself
+        for col in range(self.pos.col-1, self.pos.col+2):
+            for row in range(self.pos.row-1, self.pos.row+2):
+                # If it's itself
+                if (self.pos.row == row) and (self.pos.col == col):
                     continue
-                # Checks if neighbor node outside the board
+                # If the neighbor is not on the board
                 if not ((0 <= row < const.ROWS) and (0 <= col < const.COLUMNS)):
                     continue
 
-                neighbor = var.board[row][col]
+                # Get the node object for the neighbor
+                neighbor = get_node_object(row, col)
+                # Check if the node is one of the nodes to be skiped
                 if neighbor.type in skip:
                     continue
+                
+                # Get the cost from the neighbor to self
+                g_cost, h_cost, f_cost = neighbor.get_cost((self.pos.row, self.pos.col))
 
-                parent = self.row, self.col
-                g_cost, h_cost, f_cost = neighbor.get_cost(parent)
-
+                # Check if the new cost is lower than the old one
                 if neighbor.cost.f > f_cost:
-                    self.neighbors.append((row, col))
-                    neighbor.parent = parent
+                    self.neighbors.append((row, col))               # Add the tuple of coords to the neighbors list
+                    neighbor.parent = self.pos.row, self.pos.col    # Set the parent tuple the the self position
+                    # Set all the new cost values
                     neighbor.cost.g = g_cost
                     neighbor.cost.h = h_cost
                     neighbor.cost.f = f_cost
@@ -171,25 +174,28 @@ class Node():
         # Nodes are expected to be a vector 2 (row, col)
         row, col = node
         # Get how many vertical and horizontal moves there are between the nodes
-        vertical = abs(self.row - row)
-        horizontal = abs(self.col - col)
-        # Calculate how many straight and diagonal moves you need to make
+        vertical = abs(self.pos.row - row)
+        horizontal = abs(self.pos.col - col)
+        # Calculate how many straight and diagonal moves you need to make (For the optimal path)
         straight = abs(vertical - horizontal)
         diagonal = min(vertical, horizontal)
 
-        # The smallest cost from one node to another
+        # The smallest cost from one self to another node
         return straight * const.COST.STRAIGHT + diagonal * const.COST.DIAGONAL
 
+    # Distance from starting node
     def get_g_cost(self, parent):
         cost = self.get_best_cost(parent)
 
         if not parent == var.node.start:
             row, col = parent
-            node = var.board[row][col]
+            node = get_node_object(row, col)
+            node = get_node_object(row, col)
 
             cost = cost + node.cost.g
         return cost
 
+    # Get the newes costs and return all of them as a vector3. This function does not update the cost variables for the node
     def get_cost(self, parent):
         g_cost = self.get_g_cost(parent)
         h_cost = self.get_best_cost(var.node.end)
@@ -206,6 +212,7 @@ def create_board():
     return board
 
 
+# Display the currect board matrix on the screen
 def draw_board():
     var.window.fill(const.COLOR.BOARD)
 
@@ -214,6 +221,10 @@ def draw_board():
             node.draw()
 
     pygame.display.update()
+
+
+def get_node_object(row, col):
+    return var.board[row][col]
 
 
 def get_mouse_pos(pos):
@@ -232,7 +243,7 @@ def get_lowest_f_cost(list_open):
             return coords
 
         row, col = coords
-        node = var.board[row][col]
+        node = get_node_object(row, col)
         cost = node.cost.f
 
         if cost < lowest_value:
@@ -242,29 +253,34 @@ def get_lowest_f_cost(list_open):
     return lowest_node
 
 
+# Trace back the path starting from the end node. Call this ones the fastest path has been found.
 def trace_path():
     row, col = var.node.end
-    node = var.board[row][col]
-    current_node = node.parent
+    end_node = get_node_object(row, col)
+    current_node = end_node.parent
 
     while not current_node == var.node.start:
         row, col = current_node
-        node = var.board[row][col]
+        node = get_node_object(row, col)
         node.set_state("path")
         current_node = node.parent
 
 
-def sim_end(start):
-    end = time.time()
-    print("Finished in:", (end - start), "seconds")
+# Set the correct variables values ones the simulation is no longer running
+def simulation_end(timer_start):
+    timer_end = time.time()
+    print("Finished in", round((timer_end - timer_start), 3), "seconds")
     var.simulation.running = False
     var.simulation.done = True
 
 
 def a_star():
-    start = time.time()
+    # Start a timer to see how long it takes to find the fastest path
+    timer_start = time.time()
+    # Make some empty lists
     open = []
     closed = []
+    # Add the starting node to the open list
     open.append(var.node.start)
     first_loop = True
 
@@ -272,7 +288,7 @@ def a_star():
         # Check if the open list is empty
         if open == []:
             print("No valid paths")
-            sim_end(start)
+            simulation_end(timer_start)
             return
 
         if not first_loop:
@@ -289,7 +305,7 @@ def a_star():
 
         # Get the node object
         row, col = current_node
-        node = var.board[row][col]
+        node = get_node_object(row, col)
 
         # Make sure to never close the start or end node
         if not current_node == var.node.start and not current_node == var.node.end:
@@ -297,7 +313,7 @@ def a_star():
 
         # Check if the current node is the end node
         if current_node == var.node.end:
-            sim_end(start)
+            simulation_end(timer_start)
             trace_path()
             draw_board()
             return
@@ -316,7 +332,7 @@ def a_star():
                 if not neighbor == var.node.end:
                     # Get the node object for the neighbor
                     row, col = neighbor
-                    node = var.board[row][col]
+                    node = get_node_object(row, col)
                     node.set_state("open")
 
         draw_board()
@@ -356,10 +372,10 @@ def new_search():
                     if event.type == pygame.MOUSEMOTION:
                             var.mouse_hover_pos = event.pos
 
-                    # Mouse 1
-                    if pygame.mouse.get_pressed()[0]:
+                    # Mouse button 1 (Fire ones when presses)
+                    if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                         row, col = get_mouse_pos(var.mouse_hover_pos)
-                        node = var.board[row][col]
+                        node = get_node_object(row, col)
 
                         # EMPTY to START when there is no other START
                         if node.type == const.NODE_TYPE.EMPTY and var.node.start == None:
@@ -377,8 +393,16 @@ def new_search():
                         elif node.type == const.NODE_TYPE.END:
                             var.node.end = None
                             node.set_state("empty")
+
+                        draw_board()
+
+                    # Mouse 1 (Fiers as long as the button is held down)
+                    if pygame.mouse.get_pressed()[0]:
+                        row, col = get_mouse_pos(var.mouse_hover_pos)
+                        node = get_node_object(row, col)
+
                         # BARRIER to EMPTY
-                        elif node.type == const.NODE_TYPE.BARRIER:
+                        if node.type == const.NODE_TYPE.BARRIER:
                             node.set_state("empty")
 
                         draw_board()
@@ -386,7 +410,7 @@ def new_search():
                     # Mouse 2
                     if pygame.mouse.get_pressed()[2]:
                         row, col = get_mouse_pos(var.mouse_hover_pos)
-                        node = var.board[row][col]
+                        node = get_node_object(row, col)
 
                         # EMPTY to BARRIER
                         if node.type == const.NODE_TYPE.EMPTY:
@@ -399,7 +423,6 @@ if __name__ == "__main__":
     pygame.init()
     pygame.display.set_caption('Path Finding | A-Start Algorithm')
     var.window = pygame.display.set_mode(const.DIMENSION.WINDOW_WIDTH_HEIGHT)
-    pygame.display.update()
 
     # Main while loop
     while True:
