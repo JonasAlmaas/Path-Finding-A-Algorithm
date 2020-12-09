@@ -3,6 +3,10 @@ import sys
 import time
 import math
 
+import ctypes
+
+user32 = ctypes.windll.user32
+
 
 # Indexes for all the different nodes
 class Node_types():
@@ -26,7 +30,9 @@ class Move_cost():
 # Dimentions for things to be drawn
 class Dimensions():
     def __init__(self, rows, columns):
-        self.NODE_WIDTH_HEIGHT = 25
+        self.SCREEN_WIDTH = user32.GetSystemMetrics(1) - 150
+        # self.NODE_WIDTH_HEIGHT = 25
+        self.NODE_WIDTH_HEIGHT = self.SCREEN_WIDTH // rows
         self.NODE_MARGIN = 1
         self.WINDOW_HEIGHT = (self.NODE_WIDTH_HEIGHT + self.NODE_MARGIN) * rows
         self.WINDOW_WIDTH = (self.NODE_WIDTH_HEIGHT + self.NODE_MARGIN) * columns
@@ -200,6 +206,12 @@ class Node():
         g_cost = self.get_g_cost(parent)
         h_cost = self.get_best_cost(var.node.end)
         return g_cost, h_cost, g_cost + h_cost
+
+
+# TODO Implement this at some point pls
+# M to start it or something?
+def generare_maze():
+    pass
 
 
 def create_board():
