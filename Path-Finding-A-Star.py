@@ -2,7 +2,7 @@ import pygame
 import sys
 import time
 import math
-
+import random
 import ctypes
 
 user32 = ctypes.windll.user32
@@ -30,10 +30,10 @@ class Move_cost():
 # Dimentions for things to be drawn
 class Dimensions():
     def __init__(self, rows, columns):
-        self.SCREEN_WIDTH = user32.GetSystemMetrics(1) - 150
+        self.SCREEN_WIDTH = user32.GetSystemMetrics(1)- 150
         # self.NODE_WIDTH_HEIGHT = 25
         self.NODE_WIDTH_HEIGHT = self.SCREEN_WIDTH // rows
-        self.NODE_MARGIN = 1
+        self.NODE_MARGIN = 0
         self.WINDOW_HEIGHT = (self.NODE_WIDTH_HEIGHT + self.NODE_MARGIN) * rows
         self.WINDOW_WIDTH = (self.NODE_WIDTH_HEIGHT + self.NODE_MARGIN) * columns
         self.WINDOW_WIDTH_HEIGHT = (self.WINDOW_HEIGHT, self.WINDOW_WIDTH)
@@ -51,7 +51,7 @@ class Node_colors():
         self.BARRIER = pygame.Color("#242424")      # Dark grey
 
 
-# All colors
+# Main color class
 class Colors():
     def __init__(self):
         self.NODE = Node_colors()
@@ -64,11 +64,14 @@ class Keybindings():
         # MOUSE 1 = Place/Remove start/end nodes and remove barriers
         # Mouse 2 = Place barriers
         self.SIMULATE = pygame.K_SPACE          # Run simulation
+        self.GENERATE_MAZE = pygame.K_g         # Generate maze
         self.RESET = pygame.K_ESCAPE            # Reset everything
 
 
+# Main constants class 
 class Constants():
     def __init__(self):
+        self.REALTIME_DRAW = True
         self.ROWS = 50
         self.COLUMNS = 50
 
@@ -81,8 +84,8 @@ class Constants():
 
 class Node_variables():
     def __init__(self):
-        self.start = None   # Node to search from
-        self.end = None      # Node you want the shortest path to
+        self.start = None       # Node to search from
+        self.end = None         # Node you want the shortest path to
 
 
 class Simulation_variables():
@@ -91,6 +94,7 @@ class Simulation_variables():
         self.done = False
 
 
+# Main variables class 
 class Variables():
     def __init__(self):
         self.window = None          # The window everything is displayed in
@@ -149,8 +153,8 @@ class Node():
         skip = {const.NODE_TYPE.START, const.NODE_TYPE.CLOSED, const.NODE_TYPE.BARRIER}
 
         # Check a 3x3 grid around itself
-        for col in range(self.pos.col-1, self.pos.col+2):
-            for row in range(self.pos.row-1, self.pos.row+2):
+        for col in range(self.pos.col - 1, self.pos.col + 2):
+            for row in range(self.pos.row - 1, self.pos.row + 2):
                 # If it's itself
                 if (self.pos.row == row) and (self.pos.col == col):
                     continue
@@ -208,12 +212,6 @@ class Node():
         return g_cost, h_cost, g_cost + h_cost
 
 
-# TODO Implement this at some point pls
-# M to start it or something?
-def generare_maze():
-    pass
-
-
 def create_board():
     board = []
     for row in range(const.ROWS):
@@ -222,6 +220,15 @@ def create_board():
             node = Node(row, col)
             board[row].append(node)
     return board
+
+
+# Resets all variables
+def reset():
+    # Reseting variables
+    var.node.start = None
+    var.node.end = None
+    var.simulation.done = False
+    var.simulation.running = False
 
 
 # Display the currect board matrix on the screen
@@ -301,6 +308,7 @@ def a_star():
         if open == []:
             print("No valid paths")
             simulation_end(timer_start)
+            draw_board()
             return
 
         if not first_loop:
@@ -346,8 +354,99 @@ def a_star():
                     row, col = neighbor
                     node = get_node_object(row, col)
                     node.set_state("open")
+        
+        if const.REALTIME_DRAW:
+            draw_board()
 
-        draw_board()
+
+def get_maze_neighbors_4(row, col):
+    neighbors = []
+
+    for neighbor in [(row + 1, col), (row, col + 1), (row -1, col), (row, col - 1)]:
+        row2, col2 = neighbor
+        # If the neighbor is not on the board
+        if not ((0 <= row2 < const.ROWS) and (0 <= col2 < const.COLUMNS)):
+            continue
+        
+        neighbors.append(neighbor)
+
+    return neighbors
+
+
+def get_maze_neighbors_8(row1, col1):
+    neighbors = []
+
+    for col in range(col1 - 1, col1 + 2):
+        for row in range(row1 - 1, row1 + 2):
+            # If it's itself
+            if (row1 == row) and (col1 == col):
+                continue
+            # If the neighbor is not on the board
+            if not ((0 <= row < const.ROWS) and (0 <= col < const.COLUMNS)):
+                continue
+
+            neighbors.append((row, col))
+
+    return neighbors
+
+
+def generare_maze():
+    reset()
+    var.board = create_board()
+
+    valid_neighbors = []
+
+    # Make everything barriers
+    for row in range(const.ROWS):
+        for col in range(const.COLUMNS):
+            node = var.board[row][col]
+            node.set_state("barrier")
+
+    # Get a random start pos
+    row = random.randint(0, const.ROWS - 1)
+    col = random.randint(0, const.COLUMNS - 1)
+
+    # Starting point
+    # row = 0
+    # col = 0
+
+    valid_neighbors.append((row, col))
+
+    node = get_node_object(row, col)
+    node.set_state("empty")
+
+    while not valid_neighbors == []:
+        # Get a random neighbor
+        main_neighbor = random.choice(valid_neighbors)
+        valid_neighbors.remove(main_neighbor)
+
+        row2, col2 = main_neighbor
+
+        # Get it's neighbors
+        new_neighbors = get_maze_neighbors_4(row2, col2)
+
+        for new_neighbor in new_neighbors:
+            row3, col3 = new_neighbor
+            neighbors = get_maze_neighbors_8(row3, col3)
+
+            assume_all_barriers = True
+            for neighbor in neighbors:
+                row4, col4 = neighbor
+
+                node = get_node_object(row4, col4)
+                
+                # If the node is not the active node
+                if not (row4, col4) == (row, col):
+                    # If the neighbor is a not barrier
+                    if not node.type == const.NODE_TYPE.BARRIER:
+                        assume_all_barriers = False
+
+            if assume_all_barriers == True:
+                node = get_node_object(row2, col2)
+                node.set_state("empty")
+
+                for neighbor in new_neighbors:
+                    valid_neighbors.append(neighbor)
 
 
 def new_search():
@@ -371,12 +470,13 @@ def new_search():
 
                     # Reset everything
                     if event.key == const.KEYBIND.RESET:
-                        # Reseting variables
-                        var.node.start = None
-                        var.node.end = None
-                        var.simulation.done = False
+                        reset()
                         # Killing the loop
                         return
+                    
+                    if event.key == const.KEYBIND.GENERATE_MAZE:
+                        generare_maze()
+                        draw_board()
 
                 # If the simulation isn't running and it's not done
                 if not var.simulation.done:

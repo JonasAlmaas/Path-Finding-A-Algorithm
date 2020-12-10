@@ -8,5 +8,6 @@ A simple algorithm that finds the fastest path between two points.
 ## Keybinds
 Mouse 1: Place/Remove start/end nodes and remove barriers<br/>
 Mouse 2: Place barriers<br/>
+G: Generate Maze<br/>
 Spacebar: Simulate<br/>
 Escape: Reset
