@@ -65,7 +65,7 @@ class Keybindings():
         # Mouse 2 = Place barriers
         self.SIMULATE = pygame.K_SPACE          # Run simulation
         self.GENERATE_MAZE = pygame.K_g         # Generate maze
-        self.RESET = pygame.K_ESCAPE            # Reset everything
+        self.RESET = pygame.K_r                 # Reset everything
 
 
 # Main constants class 
